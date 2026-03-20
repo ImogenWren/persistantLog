@@ -4,8 +4,12 @@
 
 
 #ifdef __AVR__
+#pragma message "persistantLog Compiled for AVR"
 #include <EEPROM.h>
 #elif defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_SAM)
+#pragma message "persistantLog Compiled for SAMD"
+#include <FlashStorage.h>  // for SAMD21
+//#include <FlashAsEEPROM.h>  // alternative method for SAMD21 with EEPROM like API (but erases entire block in one action, lowering lifetime?)
 // create a number of flash storage objects
 // FlashStorage(log_0, secretObject::lifetimeStruct_t); // this creates a single log, we want an enumerated list of logs, each 256 Bytes big as they will each occupy one eraseable block
 // then we can do load balancing across multiple areas of memory and avoid stressing one.

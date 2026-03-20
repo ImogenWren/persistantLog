@@ -40,11 +40,9 @@ struct logData_t {
 
 
 #ifdef __AVR__
-#pragma "Compiled for AVR"
+
 #elif defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_SAM)
-#pragma "Compiled for SAMD"
-#include <FlashStorage.h>  // for SAMD21
-//#include <FlashAsEEPROM.h>  // alternative method for SAMD21 with EEPROM like API (but erases entire block in one action, lowering lifetime?)
+
 #endif
 
 #define DATA_LOG_SIGNATURE 0x978
