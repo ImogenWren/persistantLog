@@ -40,71 +40,25 @@ struct logData_t {
 
 
 #ifdef __AVR__
-#include <EEPROM.h>
+#pragma "Compiled for AVR"
 #elif defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_SAM)
+#pragma "Compiled for SAMD"
 #include <FlashStorage.h>  // for SAMD21
 //#include <FlashAsEEPROM.h>  // alternative method for SAMD21 with EEPROM like API (but erases entire block in one action, lowering lifetime?)
-// create a number of flash storage objects
-// FlashStorage(log_0, secretObject::lifetimeStruct_t); // this creates a single log, we want an enumerated list of logs, each 256 Bytes big as they will each occupy one eraseable block
-// then we can do load balancing across multiple areas of memory and avoid stressing one.
-// SAMD21 has 1024 contiguous memory zones for flash, however, it shares this space with program code, constants etc. so useable slots is:
-// useable flash - 256 kB
-// Used Flash ~ U
-// MaxBlocks = (256 kB - U) / 256 B
-
-// 10 blocks is probably fine, plus at least 1 or 2 blocks for secretObject, and 1 additional block for preindexing information to speed up searches.
-
-// Macros defined by chatGPT so use with pinch of salt
-// define the list
-#define FLASH_LOG_LIST \
-  X(log_0) \
-  X(log_1) \
-  X(log_2) \
-  X(log_3) \
-  X(log_4) \
-  X(log_5) \
-  X(log_6) \
-  X(log_7) \
-  X(log_8) \
-  X(log_9)
-
-// Expand into objects
-#define X(name) FlashStorage(name, logData_t);
-FLASH_LOG_LIST
-#undef X
-
-// Build pointer array to allow enumeration through storage objects
-#define X(name) &name,
-FlashStorageClass<logData_t> *logs[] = {
-  FLASH_LOG_LIST
-};
-#undef X
-
-// Add enum for clarity, this will mean each log can be accessed using logs[log_0_IDX]->write(...); and logs[log_1_IDX]->read(...);
-enum LogIndex {
-#define X(name) name##_IDX,
-  FLASH_LOG_LIST
-#undef X
-    NUM_LOGS
-};
-
-#define LOGGING_PERIOD_MIN 30
-#define LOGGING_PERIOD_S LOGGING_PERIOD_MIN * 60
-#define LOGGING_PERIOD_mS LOGGING_PERIOD_S * 1000
-
-// And can be enumerated through with patterns like
-/*
-for (int i = 0; i < NUM_LOGS; i++){
-  logs[i]->read(...);
-}
-*/
 #endif
 
 #define DATA_LOG_SIGNATURE 0x978
 
 
-// SAMD21 Method logs[log_IDX]->write(new_data);
-// SAMD21 Method logs[log_number]->read();
+// SAMD21 Method Write -> logs[log_IDX]->write(new_data);
+// SAMD21 Method Read ->  logs[log_number]->read();
+
+// AVR Method Write ->  
+//    uint32_t addr = EEPROM.length() - (((NUM_LOGS + 1) - log_IDX) * sizeof(logData_t));
+//    EEPROM.put(addr, new_data);
+// AVR Method Read -> 
+//    uint32_t addr = EEPROM.length() - ((NUM_LOGS + 1 - _log_IDX) * sizeof(logData_t));
+//    EEPROM.get(addr, recalled_log);
 
 
 class persistantLog {
@@ -126,12 +80,19 @@ const uint8_t NUM_LOGS = 10;
 // In code using NUM_LOGS+1 for address assigning to leave one block free at the end for errors while programming.
 // May also use EEPROM.length()-((11*sizeof(logData_t))- sizeof(INDEX_STRUCTURE) as address for saving indexing data, to speed up read & writes
 
+void init_log();
 void check_eeprom_length();
 void print_stats(const logData_t &new_data);
 logData_t get_log(uint8_t log_number); 
 logData_t get_latest_log(); 
 int16_t write_log(logData_t new_data); // returns 1 on success,// returns 0 on data not changed,// returns -1 on error#]// Maybe?
-void struct_size_check() ;
+int16_t update_log();    // writes log using current_log directly, does not need to be passed changed data
+void struct_size_check();
+
+// Need to add function to get and write data to the global struct to avoid users interacting with it directly
+logData_t get_current();   // returns the status of the current log (does not update recalled log
+void write_current(logData_t new_data);   // update current log with new data, ready to be written
+
 
 private:
 
