@@ -193,10 +193,12 @@ int16_t persistantLog::update_log() {  // writes log using current_log directly,
 
 
 logData_t persistantLog::get_current() {  // returns the status of the current log (does not update recalled log
+  return current_log;
 }
 
 
 void persistantLog::write_current(logData_t new_data) {  // update current log with new data, ready to be written
+  current_log = new_data;
 }
 
 void persistantLog::struct_size_check() {
